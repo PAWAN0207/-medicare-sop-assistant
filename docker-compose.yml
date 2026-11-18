@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    env_file: [.env]
+    volumes:
+      - index:/app/var            # index + cache survive restarts
+      - ./data:/app/data:ro       # drop new snapshots here, then: docker compose exec api python -m sopassist.ingest.cli data/sop_updates/2026-11-01
+volumes:
+  index:
