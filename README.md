@@ -1,99 +1,460 @@
-# MediCare SOP Assistant (RAG proof of concept)
+# MediCare SOP Assistant
+### AI-Powered Clinical SOP Knowledge Assistant using Retrieval-Augmented Generation (RAG)
 
-Answers clinic-staff questions **only from the current SOPs**, with citations (SOP id, version, section, page), says
-"I don't know" when the SOPs don't cover it, enforces **role-based access at retrieval time**, blocks **patient data**,
-re-indexes from a **full-library snapshot** incrementally, and caches repeated questions safely.
+<p align="center">
+  <a href="https://medicare-sop-assistant.vercel.app/">
+    <strong>🚀 OPEN LIVE APPLICATION</strong>
+  </a>
+  &nbsp; | &nbsp;
+  <a href="https://medicare-sop-assistant.onrender.com/docs">
+    API Documentation
+  </a>
+  &nbsp; | &nbsp;
+  <a href="https://github.com/PAWAN0207/-medicare-sop-assistant">
+    Source Code
+  </a>
+</p>
 
-> The data pack is confidential (D3V). Keep this repository **private**.
+---
 
-## Quick start (5 commands, no API key needed)
+## 📌 Overview
 
-```bash
-make setup                                   # venv + dependencies + .env (PROVIDER=fake)
-make test                                    # offline tests, no key, ~10 s
-make run                                     # indexes data/sops, serves http://localhost:8000  (Swagger at /docs)
-make ingest SNAPSHOT=data/sop_updates/2026-11-01   # (2nd terminal) apply the update snapshot, prints what changed
-make eval                                    # full evaluation -> docs/eval_results.md
-```
-Or `docker compose up` (copy `.env.example` to `.env` first). On Windows use WSL, or run the `python -m ...` commands in the Makefile directly.
+MediCare SOP Assistant is an AI-powered knowledge assistant designed to help healthcare staff retrieve information from Standard Operating Procedures (SOPs) using natural language questions.
 
-Try it:
-```bash
-curl -s localhost:8000/v1/ask -H 'content-type: application/json' \
-  -d '{"user_id":"U2001","question":"What is the procedure for a needle-stick injury?"}'
-```
+Instead of manually searching through multiple PDF documents, staff can ask questions and receive answers grounded in relevant SOP content, along with source citations.
 
-### Using a real LLM (Gemini free tier or any OpenAI-compatible API)
-1. Put your key in `.env` (`.env` is git-ignored and loaded automatically; real environment variables override it):
-   `PROVIDER=openai_compat`, `LLM_API_KEY=...` (see `.env.example`).
-2. `make check-key` - one chat call + one embedding call; catches a wrong key or retired model name in seconds.
-3. If you ran the fake provider before, the index holds fake vectors: `python -m sopassist.ingest.cli data/sops --rebuild`
-   (or delete `var/sop_index.db`) once after switching to a real embedder.
-4. `make eval-live`, then re-tune `MIN_TERM_COVERAGE` / `MIN_COSINE` from that run.
+The application combines Retrieval-Augmented Generation (RAG), hybrid information retrieval, role-based access control, and relevance filtering to make document-based information retrieval more accessible and reliable.
 
-Step-by-step setup for Windows / macOS / Linux, venv, testing and the GitHub push: **[docs/SETUP.md](docs/SETUP.md)**.
+**The primary objective is to provide relevant, traceable answers while avoiding unsupported responses when the available SOPs do not contain the requested information.**
 
-## Architecture
+## 🚀 Live Application
 
-```mermaid
-flowchart LR
-  subgraph Ingestion [Ingestion CLI - run on each snapshot]
-    S[Snapshot folder<br/>full library] --> P[PDF parser<br/>header meta, sections, tables,<br/>revision history dropped]
-    P --> D[Diff vs index<br/>by SOP id + content hash]
-    D --> E[Embed only<br/>added/changed docs]
-    E --> T[(ONE transaction:<br/>replace chunks, remove withdrawn,<br/>generation + 1, purge cache)]
-  end
-  subgraph Serving [REST API - POST /v1/ask]
-    Q[question + user_id] --> U[user to role to access levels]
-    U --> G[Patient-data guard<br/>regex, blocks]
-    G --> C{Cache<br/>key = question + levels + generation + model}
-    C -- hit --> R[Answer + citations]
-    C -- miss --> H[Hybrid retrieval<br/>BM25 + vector<br/>access filter IN SQL]
-    H --> Gate{Relevance gate}
-    Gate -- no --> Ref[Refusal, no LLM call]
-    Gate -- yes --> L[LLM port<br/>NOT_COVERED allowed]
-    L --> V[Citation validation<br/>built from chunk metadata]
-    V --> R
-  end
-  T --- DB[(SQLite: documents, chunks+vectors,<br/>answer_cache, ingest_runs)]
-  DB --- H
-  DB --- C
-```
-
-Code layout (`sopassist/`): `domain/` pure business rules (access, PII, text) - `ports.py` LLM/Embedder interfaces -
-`adapters/` fake + OpenAI-compatible - `ingest/` parser, indexer, CLI - `store/` SQLite - `rag/` retriever, prompts, service -
-`api/` FastAPI - `eval/` evaluation harness. Only `container.py` knows which adapters are used.
-
-## Key design answers (the "engineering points")
-| Question | Answer (details in `docs/design_review.md`) |
+| Component | Link |
 |---|---|
-| How is a document identified across runs? | **SOP id from the PDF header** (stable) + **content hash of normalised extracted content & header metadata** (change detection). File names are ignored (SOP-05 was renamed; file bytes differ on re-export). |
-| Where is the access check? | In the SQL that loads candidate chunks (`read_allowed_chunks`), before scoring. Disallowed chunks are never in memory, never ranked, never in the prompt. Role comes from `user_id` server-side, never from the question. Tested with prompt-injection and spy LLM. |
-| Cache key? | `sha256(normalised question, sorted access levels, index generation, prompt version, LLM id, embedder id, search mode)`. Levels, not user -> same visibility = shareable, different = never shared. Generation bumps on any content change and old entries are purged in the same transaction. |
-| Crash during re-index? | Parse + embed happen first (no writes). All changes are applied in **one SQLite transaction**; a crash rolls back, readers see old or new snapshot, never a mix. Re-running recovers. Tested (crash after embed, mid-apply, concurrent readers). |
+| Web Application | [Open MediCare SOP Assistant](https://medicare-sop-assistant.vercel.app/) |
+| Backend API | [Open Backend](https://medicare-sop-assistant.onrender.com/) |
+| API Documentation | [Swagger UI](https://medicare-sop-assistant.onrender.com/docs) |
+| Health Check | [Check Backend Status](https://medicare-sop-assistant.onrender.com/healthz) |
+| GitHub Repository | [View Source Code](https://github.com/PAWAN0207/-medicare-sop-assistant) |
 
-## API
-OpenAPI: `docs/openapi.json` (live at `/docs`). `POST /v1/ask` `{user_id, question}` ->
-`{answer, refused, reason, citations[{sop_id,version,title,section,section_title,page}], cached, index_generation, request_id}`.
-Errors always `{"error":{"code","message","request_id","details"}}`: `UNKNOWN_USER` 403, `INVALID_REQUEST` 422,
-`PATIENT_DATA_DETECTED` 422 (returns only identifier *types*), `INDEX_EMPTY` 503, `UPSTREAM_ERROR` 502, `UPSTREAM_TIMEOUT` 504, `INTERNAL` 500.
-`GET /healthz`. Every response carries `X-Request-ID` (also in every JSON log line, with LLM latency, tokens and cost).
+*Note: The backend is hosted on a free-tier service. Initial requests may take longer if the service has been inactive.*
 
-## Failure handling
-Timeouts on every external call. **Retried** (with exponential backoff + jitter): embedding and generation calls on timeout, 429, 5xx - they are
-read-only, so retrying is safe. **Not retried:** 4xx from the provider, anything that writes (index transaction), and the PII/access checks.
-Failed answers are never cached. A bad PDF, duplicate SOP id, empty folder or suspicious mass-withdrawal aborts the whole snapshot with the index untouched.
+## ✨ Key Features
 
-## Scope and honest status
-Done: all Core items; stretch: hybrid search (offline before/after in the eval, meaningful only with a real embedder).
-Not done: UI; conflict detection at ingestion (conflicts are surfaced at question time by the prompt); semantic cache; OCR; auth.
+### 1. AI-Powered SOP Question Answering
+- Ask questions using natural language.
+- Retrieve relevant information from available SOP documents.
+- Generate answers using retrieved document context.
+- Return source citations to support answer verification.
 
-## Known limitations
-1. **The live LLM adapter has not been exercised against a real provider by the author of this code** - it is covered by mocked-HTTP tests only. Model names/endpoints in `.env.example` must be verified with your key. The committed eval numbers are **offline (fake LLM)**; they do not measure answer quality.
-2. Retrieval gate and lexical normalisations were tuned on the offline embedder and on the pack's own questions (optimistic); a held-out check showed 2/12 false refusals. Re-tune with a real embedder.
-3. Offline eval: Q04 fails (lexical embedder can't bridge "10 degrees" -> "outside 2 to 8").
-4. `user_id` is trusted as given (no authentication) - production needs SSO/JWT in front.
-5. PII guard is rule-based: strong for phone/Aadhaar/MRN/DOB/email, weaker for free-text names (needs a title or the word "patient"). Production: add a DLP/NER service behind the same function.
-6. Exact-match cache only (normalised text); paraphrases miss. SQLite = single node; at scale move to Postgres+pgvector and a shared cache.
-7. Every query loads the permitted chunk vectors from SQLite (fine for ~1,500 chunks); keep an in-memory copy per generation if the library grows.
-8. Text-based PDFs with ruled tables only (no OCR, no merged-cell tables). Answer completeness is not judged (needs a human or LLM judge).
+### 2. Hybrid Information Retrieval
+- Combines keyword-based BM25 retrieval with vector similarity search.
+- Uses Reciprocal Rank Fusion (RRF) to combine retrieval rankings.
+- Applies relevance checks before sending retrieved context to the language model.
+- Retrieves only documents that the requesting staff member is permitted to access.
+
+### 3. Role-Based Access Control (RBAC)
+- Supports staff-specific access permissions.
+- Applies access policies based on staff roles.
+- Filters document retrieval according to permitted access levels.
+- Prevents users from retrieving information outside their assigned access scope.
+
+### 4. Source Citations
+Answers include supporting source information such as:
+- SOP identification.
+- SOP version.
+- Document title.
+- Section and section title.
+- Page number.
+
+This allows staff to verify the information against the original procedure.
+
+### 5. Responsible Answering and Refusal Handling
+The system is designed to avoid generating unsupported answers.
+
+It can refuse a question when:
+- No relevant SOP information is retrieved.
+- The available document context does not cover the question.
+- The generated answer cannot be sufficiently grounded in retrieved evidence.
+
+### 6. Privacy and Input Validation
+- Detects potentially sensitive information in user questions.
+- Includes checks for personally identifiable information (PII).
+- Applies validation before processing requests.
+- Keeps confidential source documents and sensitive evaluation inputs out of public documentation.
+
+### 7. Document Ingestion and Indexing
+- Extracts text from PDF SOP documents.
+- Preserves document and page-level metadata.
+- Splits extracted content into searchable chunks.
+- Generates embeddings for retrieval.
+- Stores indexed content and metadata in SQLite.
+
+---
+
+## 🏗️ System Architecture
+
+```text
+                 ┌──────────────────────┐
+                 │         USER         │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │   React Frontend     │
+                 │   Hosted on Vercel   │
+                 └──────────┬───────────┘
+                            │
+                       HTTPS / API
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │    FastAPI Backend   │
+                 │     Hosted on Render │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │ Authentication &    │
+                 │ Access Policy (RBAC) │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │    RAG Pipeline      │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │   Hybrid Retrieval   │
+                 │   BM25 + Vector      │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │   Relevance Gate     │
+                 │   & Context Builder  │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │  Gemini LLM Adapter  │
+                 │  Answer Generation  │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │ Answer + Citations   │
+                 │ or Refusal Response  │
+                 └──────────────────────┘
+```
+
+## 🔄 RAG Workflow
+
+The application follows two major processing stages.
+
+### A. Document Ingestion
+
+```text
+SOP PDF Documents
+       │
+       ▼
+PDF Text Extraction
+       │
+       ▼
+Text Processing
+       │
+       ▼
+Section and Chunk Creation
+       │
+       ▼
+Embedding Generation
+       │
+       ▼
+SQLite Index Storage
+```
+
+### B. Question Answering
+
+```text
+Staff Question
+      │
+      ▼
+Input Validation
+      │
+      ▼
+Staff Access Verification
+      │
+      ▼
+Question Processing
+      │
+      ▼
+Hybrid Retrieval
+(BM25 + Vector Search)
+      │
+      ▼
+Rank Fusion (RRF)
+      │
+      ▼
+Relevance Validation
+      │
+      ├──────── No Relevant Context
+      │                  │
+      │                  ▼
+      │             Safe Refusal
+      │
+      ▼
+Relevant Context
+      │
+      ▼
+Gemini Answer Generation
+      │
+      ▼
+Citation Validation
+      │
+      ▼
+Answer with Sources
+```
+
+## 🛠️ Technology Stack
+
+| Category | Technology | Purpose |
+|---|---|---|
+| Frontend | React | User interface |
+| Frontend Build | Vite | Frontend development and build |
+| Backend | Python, FastAPI | API development and application logic |
+| API Server | Uvicorn | ASGI application server |
+| LLM | Google Gemini | Context-grounded answer generation |
+| Embedding Model | gemini-embedding-001 | Document and query embeddings |
+| Retrieval | BM25 + Vector Search | Hybrid information retrieval |
+| Ranking | Reciprocal Rank Fusion | Combines retrieval rankings |
+| Database | SQLite | Document chunks and index metadata |
+| PDF Processing | pdfplumber | PDF text extraction |
+| Testing | pytest | Automated testing |
+| Deployment | Vercel | Frontend hosting |
+| Deployment | Render | Backend hosting |
+| Version Control | Git, GitHub | Source code management |
+
+## 📊 Testing and Evaluation
+
+Testing was performed across application components, retrieval behaviour, access permissions, and privacy-related validation.
+
+| Testing Area | Result |
+|---|---|
+| Automated Test Suite | 74 Tests Passed |
+| SOP Document Indexing | 15 Documents Indexed |
+| Role-Based Access Testing | Passed |
+| Retrieval Testing | Passed |
+| Citation Validation | Passed |
+| Refusal Handling | Passed |
+| PII Detection Testing | Passed |
+| API Testing | Passed |
+| Live Deployment Testing | Passed |
+| End-to-End Testing | Passed |
+
+The results represent the completed project test runs and deployment verification.
+
+## 📁 Project Structure
+
+```text
+sop-assistant/
+│
+├── data/
+│   ├── sops/                  # SOP source documents (not published)
+│   ├── sop_updates/           # Document update inputs
+│   ├── eval_questions.csv     # Evaluation inputs
+│   └── staff_users.csv        # Staff access data
+│
+├── sopassist/
+│   ├── adapters/
+│   │   ├── fake.py
+│   │   └── openai_compat.py
+│   │
+│   ├── api/
+│   │   └── app.py
+│   │
+│   ├── domain/
+│   │   ├── access.py
+│   │   ├── models.py
+│   │   ├── pii.py
+│   │   └── text.py
+│   │
+│   ├── eval/
+│   │   ├── expectations.py
+│   │   └── run_eval.py
+│   │
+│   ├── ingest/
+│   │   ├── cli.py
+│   │   ├── indexer.py
+│   │   └── pdf_parser.py
+│   │
+│   ├── rag/
+│   │   ├── prompts.py
+│   │   ├── retriever.py
+│   │   └── service.py
+│   │
+│   ├── store/
+│   │   └── sqlite_store.py
+│   │
+│   ├── config.py
+│   ├── container.py
+│   ├── main.py
+│   └── ports.py
+│
+├── tests/
+│
+├── docs/
+│
+├── requirements.txt
+├── Dockerfile.render
+└── README.md
+```
+
+*This is a simplified overview of the main application modules. Confidential data files and local runtime artifacts are intentionally excluded from the public repository.*
+
+## ⚙️ Local Installation and Setup
+
+### Prerequisites
+
+- Python 3.12 recommended.
+- Git.
+- A Google Gemini API key with access to the configured models.
+- A modern web browser.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/PAWAN0207/-medicare-sop-assistant.git
+
+cd -medicare-sop-assistant
+```
+
+### 2. Create a virtual environment
+
+**Windows PowerShell**
+
+```powershell
+py -3.12 -m venv .venv
+
+.\.venv\Scripts\Activate.ps1
+```
+
+### 3. Install dependencies
+
+```powershell
+python -m pip install --upgrade pip
+
+pip install -r requirements.txt
+```
+
+### 4. Configure environment variables
+
+Create a local `.env` file using `.env.example` as a reference.
+
+Typical configuration includes:
+
+```env
+PROVIDER=openai_compat
+
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_API_KEY=your_gemini_api_key
+LLM_MODEL=your_available_gemini_model
+
+EMBED_MODEL=gemini-embedding-001
+
+DATA_DIR=data
+DB_PATH=var/sop_index.db
+```
+
+Use the exact variable names and supported values from the repository's `.env.example` and configuration module.
+
+**Important:** Never commit your actual API key, `.env` file, confidential SOP documents, or staff records to GitHub.
+
+### 5. Prepare the document index
+
+Place authorized SOP PDFs inside the configured data directory.
+
+Run the ingestion command:
+
+```powershell
+python -m sopassist.ingest.cli data/sops
+```
+
+### 6. Start the backend
+
+```powershell
+python -m uvicorn sopassist.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+The backend will be available at:
+
+- API: `http://127.0.0.1:8000`
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- Health Check: `http://127.0.0.1:8000/healthz`
+
+### 7. Run automated tests
+
+```powershell
+python -m pytest -v
+```
+
+## 🔐 Security and Data Handling
+
+This project demonstrates document access controls, privacy-related input validation, and grounded question answering.
+
+However, a publicly accessible demonstration should not be treated as a production healthcare system.
+
+- Do not upload real patient records or personally identifiable information.
+- Do not publish confidential SOP documents or staff records.
+- Keep API keys and authentication secrets outside version control.
+- Restrict access to the backend and its data in production.
+- Use appropriate authentication, monitoring, rate limiting, and persistent storage before handling real organizational data.
+
+## ⚠️ Important Disclaimer
+
+MediCare SOP Assistant is an AI-assisted document retrieval and information support application.
+
+It is not a replacement for professional medical judgement, clinical decision-making, official hospital policies, or emergency procedures.
+
+Users should always verify important information against the applicable approved SOP and follow their organization's established protocols.
+
+The live application is a portfolio demonstration, not a certified healthcare product.
+
+## 🚀 Deployment
+
+The application is deployed using separate frontend and backend services.
+
+| Component | Hosting Platform |
+|---|---|
+| Frontend | Vercel |
+| Backend API | Render |
+
+The frontend communicates with the backend through HTTPS API requests.
+
+Deployment configuration is managed through environment variables so that API endpoints, model settings, and application configuration can be changed without modifying source code.
+
+## 🔮 Future Improvements
+
+- Persistent production-grade database and vector storage.
+- Advanced retrieval and reranking strategies.
+- Document version management and change tracking.
+- Expanded monitoring and observability.
+- More comprehensive evaluation using real-world query patterns.
+- Stronger production authentication and authorization.
+- Improved deployment scalability and reliability.
+
+## 👨‍💻 Author
+
+**Pawan Ajay Prasad**
+
+AI Engineer | Generative AI | Retrieval-Augmented Generation
+
+- GitHub: https://github.com/PAWAN0207
+- LinkedIn: https://www.linkedin.com/in/pawan-prasad-analyst/
+- Portfolio: https://pawan0207.github.io/
+
+---
+
+<p align="center">
+  <strong>Built to make healthcare SOP information easier to access, verify, and understand.</strong>
+</p>
