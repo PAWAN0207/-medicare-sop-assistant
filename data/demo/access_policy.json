@@ -1,0 +1,15 @@
+{
+  "description": "Access policy for fictional public demo documents.",
+  "access_field_to_level": {
+    "All staff": "all",
+    "Clinical staff": "clinical",
+    "Management only": "hr"
+  },
+  "role_levels": {
+    "front_desk": ["all"],
+    "nurse": ["all", "clinical"],
+    "doctor": ["all", "clinical"],
+    "clinic_manager": ["all", "clinical", "hr"],
+    "hr": ["all", "hr"]
+  }
+}
