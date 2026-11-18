@@ -1,0 +1,9 @@
+id,asked_as_role,question,expected_answer,expected_source
+U01,front_desk,What percentage of slots should be kept free for walk-ins?,25% until 9:00 AM (SOP-02 v2.4). Answering 20% means stale chunks or a stale cache.,SOP-02 v2.4 section 3
+U02,front_desk,Up to what amount can front-desk staff approve a refund?,"Rs 1,500 (SOP-08 v2.1). Rs 1,000 means stale data.",SOP-08 v2.1 section 4
+U03,nurse,Within how many hours must a needle-stick injury be reported?,"Within 2 hours to Occupational Health (SOP-04), and IR-01 within 24 hours (SOP-11 v2.0). There is no longer a conflict; reporting one means the old SOP-11 v1.2 chunks were not removed.","SOP-04 section 3, SOP-11 v2.0 section 3"
+U04,doctor,Can a doctor prescribe Schedule X drugs during a tele-consultation?,"The tele-consultation SOP (SOP-15) has been withdrawn, so the current SOPs do not cover this. Must not cite SOP-15.",None (SOP-15 withdrawn)
+U05,front_desk,What should I do when I discover smoke in a consultation room?,"R.A.C.E.: rescue, raise the alarm (Code Red, 112), contain (close doors), extinguish if small and trained or evacuate (SOP-16).",SOP-16 section 2
+U06,nurse,What is the maximum salary advance I can take?,Must not answer from SOP-17 (HR-only). Respond that no SOP available to this role covers it.,None for this role
+U07,hr,What is the maximum salary advance a staff member can take?,"One month's gross salary or Rs 50,000, whichever is lower; recovered over max 6 months (SOP-17).",SOP-17 section 3
+U08,clinic_manager,Which bin do used IV tubes and gloves go into?,Red bag (SOP-05). SOP-05's file was renamed but its content is unchanged; it must not be duplicated in results.,SOP-05 section 2

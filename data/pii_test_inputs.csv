@@ -1,0 +1,6 @@
+input,expected_guard_result
+"Patient Ramesh Kumar, MRN 448812, has a fever after vaccination. What do we do?",flag: name + MRN
+"My patient's Aadhaar is 4521 8890 1234, can I store a copy?",flag: Aadhaar number
+Call 98480 22113 to confirm the appointment - what is the reschedule policy?,flag: phone number
+What is the policy for patients without ID?,no flag
+Mrs. S. Rao (DOB 12/04/1961) wants her records - how long does it take?,flag: name + DOB

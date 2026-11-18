@@ -1,0 +1,34 @@
+{
+  "description": "Maps the 'Access' field printed in each SOP header to an access level, and roles to the levels they may read.",
+  "access_field_to_level": {
+    "All clinic staff": "all",
+    "Clinical staff (doctors, nurses, pharmacists)": "clinical",
+    "HR and Clinic Managers only": "hr"
+  },
+  "role_levels": {
+    "front_desk": [
+      "all"
+    ],
+    "nurse": [
+      "all",
+      "clinical"
+    ],
+    "doctor": [
+      "all",
+      "clinical"
+    ],
+    "pharmacist": [
+      "all",
+      "clinical"
+    ],
+    "clinic_manager": [
+      "all",
+      "clinical",
+      "hr"
+    ],
+    "hr": [
+      "all",
+      "hr"
+    ]
+  }
+}
