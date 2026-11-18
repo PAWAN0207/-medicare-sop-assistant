@@ -1,250 +1,296 @@
-# MediCare SOP Assistant
-### AI-Powered Clinical SOP Knowledge Assistant using Retrieval-Augmented Generation (RAG)
+<div align="center">
 
-<p align="center">
-  <a href="https://medicare-sop-assistant.vercel.app/">
-    <strong>🚀 OPEN LIVE APPLICATION</strong>
-  </a>
-  &nbsp; | &nbsp;
-  <a href="https://medicare-sop-assistant.onrender.com/docs">
-    API Documentation
-  </a>
-  &nbsp; | &nbsp;
-  <a href="https://github.com/PAWAN0207/-medicare-sop-assistant">
-    Source Code
-  </a>
-</p>
+# MediCare SOP Assistant
+
+### AI-Powered Healthcare Knowledge Retrieval Platform
+
+**Ask questions. Retrieve trusted SOP information. Verify every answer.**
+
+A Retrieval-Augmented Generation (RAG) application that helps healthcare staff access relevant Standard Operating Procedures through natural language queries, hybrid search, and source-grounded AI responses.
+
+<br>
+
+<a href="https://medicare-sop-assistant.vercel.app/">
+  <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-Open_Application-16A34A?style=for-the-badge" alt="Live Demo">
+</a>
+<a href="https://medicare-sop-assistant.onrender.com/docs">
+  <img src="https://img.shields.io/badge/API-Swagger_Docs-2563EB?style=for-the-badge" alt="API Docs">
+</a>
+
+<br><br>
+
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=flat-square&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-Frontend-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Gemini](https://img.shields.io/badge/Google_Gemini-LLM-4285F4?style=flat-square&logo=googlegemini&logoColor=white)
+![RAG](https://img.shields.io/badge/Architecture-RAG-8B5CF6?style=flat-square)
+![Tests](https://img.shields.io/badge/Automated_Tests-74_Passed-success?style=flat-square)
+![Deployment](https://img.shields.io/badge/Deployment-Live-success?style=flat-square)
+
+<br>
+
+**[Live Application](https://medicare-sop-assistant.vercel.app/) · [API Documentation](https://medicare-sop-assistant.onrender.com/docs) · [Source Code](https://github.com/PAWAN0207/-medicare-sop-assistant)**
+
+</div>
 
 ---
 
-## 📌 Overview
+## 📖 Table of Contents
 
-MediCare SOP Assistant is an AI-powered knowledge assistant designed to help healthcare staff retrieve information from Standard Operating Procedures (SOPs) using natural language questions.
+- [Project Overview](#-project-overview)
+- [Why This Project?](#-why-this-project)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [How the RAG Pipeline Works](#-how-the-rag-pipeline-works)
+- [Technology Stack](#-technology-stack)
+- [Testing and Evaluation](#-testing-and-evaluation)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Deployment](#-deployment)
+- [Security and Data Handling](#-security-and-data-handling)
+- [Future Improvements](#-future-improvements)
+- [Author](#-author)
 
-Instead of manually searching through multiple PDF documents, staff can ask questions and receive answers grounded in relevant SOP content, along with source citations.
+---
 
-The application combines Retrieval-Augmented Generation (RAG), hybrid information retrieval, role-based access control, and relevance filtering to make document-based information retrieval more accessible and reliable.
+## 🧠 Project Overview
 
-**The primary objective is to provide relevant, traceable answers while avoiding unsupported responses when the available SOPs do not contain the requested information.**
+MediCare SOP Assistant is an AI-powered knowledge retrieval application designed to simplify access to healthcare Standard Operating Procedures (SOPs).
 
-## 🚀 Live Application
+Healthcare organizations rely on documented procedures for daily operations. Finding the correct information across multiple documents can take time, particularly when staff need specific instructions.
 
-| Component | Link |
+This application addresses that challenge through a conversational interface backed by a Retrieval-Augmented Generation architecture.
+
+Users can ask questions in natural language and receive answers based on relevant SOP content, supported by document-level citations.
+
+### Project at a Glance
+
+| Area | Details |
 |---|---|
-| Web Application | [Open MediCare SOP Assistant](https://medicare-sop-assistant.vercel.app/) |
-| Backend API | [Open Backend](https://medicare-sop-assistant.onrender.com/) |
-| API Documentation | [Swagger UI](https://medicare-sop-assistant.onrender.com/docs) |
-| Health Check | [Check Backend Status](https://medicare-sop-assistant.onrender.com/healthz) |
-| GitHub Repository | [View Source Code](https://github.com/PAWAN0207/-medicare-sop-assistant) |
+| Application | Healthcare SOP Knowledge Assistant |
+| Architecture | Retrieval-Augmented Generation |
+| Documents Indexed | 15 SOP documents |
+| Retrieval Strategy | Hybrid Search |
+| Ranking | Reciprocal Rank Fusion |
+| Language Model | Google Gemini |
+| Backend | FastAPI |
+| Frontend | React + Vite |
+| Database | SQLite |
+| Automated Tests | 74 passed |
+| Frontend Hosting | Vercel |
+| Backend Hosting | Render |
 
-*Note: The backend is hosted on a free-tier service. Initial requests may take longer if the service has been inactive.*
+---
+
+## 🎯 Why This Project?
+
+Traditional document-based workflows often require users to:
+
+- Open multiple PDF documents.
+- Search manually for relevant sections.
+- Understand lengthy procedural instructions.
+- Verify information against the original source.
+
+MediCare SOP Assistant introduces a conversational retrieval layer over approved SOP documents.
+
+**The goal is not simply to generate answers. It is to retrieve relevant evidence, respect user access permissions, and provide traceable responses.**
+
+---
 
 ## ✨ Key Features
 
-### 1. AI-Powered SOP Question Answering
-- Ask questions using natural language.
-- Retrieve relevant information from available SOP documents.
-- Generate answers using retrieved document context.
-- Return source citations to support answer verification.
+### 01. Natural Language Question Answering
 
-### 2. Hybrid Information Retrieval
-- Combines keyword-based BM25 retrieval with vector similarity search.
-- Uses Reciprocal Rank Fusion (RRF) to combine retrieval rankings.
-- Applies relevance checks before sending retrieved context to the language model.
-- Retrieves only documents that the requesting staff member is permitted to access.
+- Ask questions without knowing the exact document name.
+- Retrieve relevant SOP information.
+- Generate context-grounded answers using Google Gemini.
+- Provide supporting source citations.
 
-### 3. Role-Based Access Control (RBAC)
-- Supports staff-specific access permissions.
-- Applies access policies based on staff roles.
-- Filters document retrieval according to permitted access levels.
-- Prevents users from retrieving information outside their assigned access scope.
+### 02. Hybrid Information Retrieval
 
-### 4. Source Citations
-Answers include supporting source information such as:
-- SOP identification.
-- SOP version.
+Combines two retrieval approaches:
+
+| Retrieval Method | Purpose |
+|---|---|
+| BM25 | Keyword-based retrieval |
+| Vector Search | Semantic similarity retrieval |
+| Reciprocal Rank Fusion | Combines retrieval rankings |
+
+This approach helps retrieve relevant information using both keyword matching and vector similarity.
+
+### 03. Role-Based Access Control (RBAC)
+
+- Staff-specific access permissions.
+- Role-based document access policies.
+- Access-filtered retrieval.
+- Protection against retrieving documents outside the permitted access scope.
+
+### 04. Source-Level Citations
+
+Responses can include:
+
+- SOP ID.
 - Document title.
-- Section and section title.
-- Page number.
+- SOP version.
+- Section information.
+- Page reference.
 
-This allows staff to verify the information against the original procedure.
+Users can verify generated information against its source document.
 
-### 5. Responsible Answering and Refusal Handling
-The system is designed to avoid generating unsupported answers.
+### 05. Relevance Filtering and Safe Refusal
 
-It can refuse a question when:
-- No relevant SOP information is retrieved.
-- The available document context does not cover the question.
-- The generated answer cannot be sufficiently grounded in retrieved evidence.
+The application includes relevance checks before answer generation.
 
-### 6. Privacy and Input Validation
-- Detects potentially sensitive information in user questions.
-- Includes checks for personally identifiable information (PII).
-- Applies validation before processing requests.
-- Keeps confidential source documents and sensitive evaluation inputs out of public documentation.
+When relevant information cannot be retrieved or the available evidence does not support an answer, the system can return a refusal instead of generating unsupported information.
 
-### 7. Document Ingestion and Indexing
-- Extracts text from PDF SOP documents.
-- Preserves document and page-level metadata.
-- Splits extracted content into searchable chunks.
-- Generates embeddings for retrieval.
-- Stores indexed content and metadata in SQLite.
+### 06. Privacy and Input Validation
+
+- PII-related input checks.
+- Request validation.
+- Controlled document retrieval.
+- Separation of confidential source materials from public project documentation.
+
+### 07. PDF Ingestion and Indexing
+
+- PDF text extraction.
+- Document metadata preservation.
+- Section-aware content processing.
+- Text chunking.
+- Embedding generation.
+- SQLite-based index storage.
 
 ---
 
 ## 🏗️ System Architecture
 
-```text
-                 ┌──────────────────────┐
-                 │         USER         │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │   React Frontend     │
-                 │   Hosted on Vercel   │
-                 └──────────┬───────────┘
-                            │
-                       HTTPS / API
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │    FastAPI Backend   │
-                 │     Hosted on Render │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │ Authentication &    │
-                 │ Access Policy (RBAC) │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │    RAG Pipeline      │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │   Hybrid Retrieval   │
-                 │   BM25 + Vector      │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │   Relevance Gate     │
-                 │   & Context Builder  │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │  Gemini LLM Adapter  │
-                 │  Answer Generation  │
-                 └──────────┬───────────┘
-                            │
-                            ▼
-                 ┌──────────────────────┐
-                 │ Answer + Citations   │
-                 │ or Refusal Response  │
-                 └──────────────────────┘
+The application uses a decoupled frontend and backend architecture.
+
+```mermaid
+flowchart TD
+    A["Healthcare Staff"] --> B["React + Vite Frontend"]
+    B -->|"HTTPS API Requests"| C["FastAPI Backend"]
+
+    C --> D["Authentication & Access Control"]
+    D --> E["Input Validation"]
+    E --> F["RAG Service"]
+
+    F --> G["Hybrid Retrieval"]
+    G --> H["BM25 Search"]
+    G --> I["Vector Search"]
+
+    H --> J["Reciprocal Rank Fusion"]
+    I --> J
+
+    J --> K["Relevance Validation"]
+
+    K -->|"Relevant Context"| L["Google Gemini"]
+    K -->|"Insufficient Evidence"| M["Safe Refusal"]
+
+    L --> N["Citation Validation"]
+    N --> O["Grounded Answer + Sources"]
+
+    M --> P["Refusal Response"]
+
+    O --> B
+    P --> B
+
+    style B fill:#2563eb,color:#fff
+    style C fill:#0f766e,color:#fff
+    style L fill:#7c3aed,color:#fff
+    style O fill:#15803d,color:#fff
+    style M fill:#b45309,color:#fff
 ```
 
-## 🔄 RAG Workflow
+### Deployment Architecture
 
-The application follows two major processing stages.
+| Layer | Technology | Hosting |
+|---|---|---|
+| Frontend | React + Vite | Vercel |
+| Backend | FastAPI + Uvicorn | Render |
+| AI Processing | Google Gemini | External API |
+| Document Index | SQLite | Backend runtime |
 
-### A. Document Ingestion
+---
 
-```text
-SOP PDF Documents
-       │
-       ▼
-PDF Text Extraction
-       │
-       ▼
-Text Processing
-       │
-       ▼
-Section and Chunk Creation
-       │
-       ▼
-Embedding Generation
-       │
-       ▼
-SQLite Index Storage
+## 🔄 How the RAG Pipeline Works
+
+The application has two primary workflows.
+
+### 1. Document Ingestion Pipeline
+
+```mermaid
+flowchart TD
+    A["SOP PDF Documents"] --> B["PDF Text Extraction"]
+    B --> C["Text Processing"]
+    C --> D["Section and Chunk Creation"]
+    D --> E["Embedding Generation"]
+    E --> F["SQLite Index Storage"]
+
+    style A fill:#2563eb,color:#fff
+    style F fill:#15803d,color:#fff
 ```
 
-### B. Question Answering
+### 2. Question Answering Pipeline
 
-```text
-Staff Question
-      │
-      ▼
-Input Validation
-      │
-      ▼
-Staff Access Verification
-      │
-      ▼
-Question Processing
-      │
-      ▼
-Hybrid Retrieval
-(BM25 + Vector Search)
-      │
-      ▼
-Rank Fusion (RRF)
-      │
-      ▼
-Relevance Validation
-      │
-      ├──────── No Relevant Context
-      │                  │
-      │                  ▼
-      │             Safe Refusal
-      │
-      ▼
-Relevant Context
-      │
-      ▼
-Gemini Answer Generation
-      │
-      ▼
-Citation Validation
-      │
-      ▼
-Answer with Sources
+```mermaid
+flowchart TD
+    A["User Question"] --> B["Input Validation"]
+    B --> C["Staff Access Verification"]
+    C --> D["Hybrid Retrieval"]
+
+    D --> E["BM25 + Vector Search"]
+    E --> F["Reciprocal Rank Fusion"]
+    F --> G["Relevance Validation"]
+
+    G -->|"Relevant"| H["Context Construction"]
+    G -->|"Not Relevant"| I["Refusal Response"]
+
+    H --> J["Gemini Answer Generation"]
+    J --> K["Citation Validation"]
+    K --> L["Answer with Sources"]
+
+    style A fill:#2563eb,color:#fff
+    style J fill:#7c3aed,color:#fff
+    style L fill:#15803d,color:#fff
+    style I fill:#b45309,color:#fff
 ```
+
+---
 
 ## 🛠️ Technology Stack
 
-| Category | Technology | Purpose |
-|---|---|---|
-| Frontend | React | User interface |
-| Frontend Build | Vite | Frontend development and build |
-| Backend | Python, FastAPI | API development and application logic |
-| API Server | Uvicorn | ASGI application server |
-| LLM | Google Gemini | Context-grounded answer generation |
-| Embedding Model | gemini-embedding-001 | Document and query embeddings |
-| Retrieval | BM25 + Vector Search | Hybrid information retrieval |
-| Ranking | Reciprocal Rank Fusion | Combines retrieval rankings |
-| Database | SQLite | Document chunks and index metadata |
-| PDF Processing | pdfplumber | PDF text extraction |
-| Testing | pytest | Automated testing |
-| Deployment | Vercel | Frontend hosting |
-| Deployment | Render | Backend hosting |
-| Version Control | Git, GitHub | Source code management |
+| Category | Technology |
+|---|---|
+| Programming Language | Python |
+| Frontend Framework | React |
+| Frontend Build Tool | Vite |
+| Backend Framework | FastAPI |
+| API Server | Uvicorn |
+| Large Language Model | Google Gemini |
+| Embedding Model | gemini-embedding-001 |
+| Retrieval | BM25 + Vector Search |
+| Ranking Algorithm | Reciprocal Rank Fusion |
+| Database | SQLite |
+| PDF Processing | pdfplumber |
+| Automated Testing | pytest |
+| Frontend Deployment | Vercel |
+| Backend Deployment | Render |
+| Version Control | Git + GitHub |
+
+---
 
 ## 📊 Testing and Evaluation
 
-Testing was performed across application components, retrieval behaviour, access permissions, and privacy-related validation.
+The application was tested across core functionality, document retrieval, permissions, and end-to-end deployment.
 
-| Testing Area | Result |
+### Test Summary
+
+| Evaluation Area | Result |
 |---|---|
-| Automated Test Suite | 74 Tests Passed |
-| SOP Document Indexing | 15 Documents Indexed |
-| Role-Based Access Testing | Passed |
+| Automated Test Suite | 74 Passed |
+| SOP Document Indexing | 15 Documents |
 | Retrieval Testing | Passed |
+| RBAC Testing | Passed |
 | Citation Validation | Passed |
 | Refusal Handling | Passed |
 | PII Detection Testing | Passed |
@@ -252,76 +298,72 @@ Testing was performed across application components, retrieval behaviour, access
 | Live Deployment Testing | Passed |
 | End-to-End Testing | Passed |
 
-The results represent the completed project test runs and deployment verification.
+### Testing Focus
+
+- Retrieval of relevant SOP content.
+- Handling of questions without supporting document evidence.
+- Role-specific document access.
+- Citation and source validation.
+- Input validation and privacy-related checks.
+- Frontend-to-backend communication.
+
+*Results reflect the completed project test runs and deployment verification.*
+
+---
 
 ## 📁 Project Structure
 
 ```text
-sop-assistant/
+-med icare-sop-assistant/
 │
-├── data/
-│   ├── sops/                  # SOP source documents (not published)
-│   ├── sop_updates/           # Document update inputs
-│   ├── eval_questions.csv     # Evaluation inputs
-│   └── staff_users.csv        # Staff access data
+├── data/                   # Document and data resources
 │
-├── sopassist/
-│   ├── adapters/
-│   │   ├── fake.py
-│   │   └── openai_compat.py
-│   │
-│   ├── api/
-│   │   └── app.py
-│   │
-│   ├── domain/
-│   │   ├── access.py
-│   │   ├── models.py
-│   │   ├── pii.py
-│   │   └── text.py
-│   │
-│   ├── eval/
-│   │   ├── expectations.py
-│   │   └── run_eval.py
-│   │
-│   ├── ingest/
-│   │   ├── cli.py
-│   │   ├── indexer.py
-│   │   └── pdf_parser.py
-│   │
-│   ├── rag/
-│   │   ├── prompts.py
-│   │   ├── retriever.py
-│   │   └── service.py
-│   │
-│   ├── store/
-│   │   └── sqlite_store.py
-│   │
+├── docs/                   # Project documentation
+│
+├── frontend/               # React + Vite application
+│
+├── scripts/                # Utility and project scripts
+│
+├── sopassist/              # Backend application
+│   ├── adapters/           # LLM and model adapters
+│   ├── api/                # API components
+│   ├── domain/             # Domain models and validation
+│   ├── eval/               # Evaluation utilities
+│   ├── ingest/              # PDF ingestion and indexing
+│   ├── rag/                 # Retrieval and generation
+│   ├── store/               # SQLite storage
 │   ├── config.py
 │   ├── container.py
-│   ├── main.py
-│   └── ports.py
+│   └── main.py
 │
-├── tests/
+├── tests/                  # Automated test suite
 │
-├── docs/
-│
-├── requirements.txt
+├── .env.example            # Environment template
+├── .gitignore
+├── Dockerfile
 ├── Dockerfile.render
+├── docker-compose.yml
+├── Makefile
+├── requirements.txt
+├── AI_USAGE.md
 └── README.md
 ```
 
-*This is a simplified overview of the main application modules. Confidential data files and local runtime artifacts are intentionally excluded from the public repository.*
+*Confidential source documents, staff information, credentials, and sensitive evaluation data should not be published.*
 
-## ⚙️ Local Installation and Setup
+---
+
+## ⚙️ Getting Started
 
 ### Prerequisites
 
-- Python 3.12 recommended.
-- Git.
-- A Google Gemini API key with access to the configured models.
-- A modern web browser.
+- Python 3.12
+- Git
+- Node.js and npm
+- Google Gemini API key for live LLM functionality
+- Access to authorized SOP PDF documents for local indexing
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/PAWAN0207/-medicare-sop-assistant.git
@@ -329,7 +371,7 @@ git clone https://github.com/PAWAN0207/-medicare-sop-assistant.git
 cd -medicare-sop-assistant
 ```
 
-### 2. Create a virtual environment
+### 2. Create a Python Virtual Environment
 
 **Windows PowerShell**
 
@@ -339,7 +381,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+### 3. Install Backend Dependencies
 
 ```powershell
 python -m pip install --upgrade pip
@@ -347,11 +389,11 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Configure Environment Variables
 
-Create a local `.env` file using `.env.example` as a reference.
+Create a local `.env` file using `.env.example` as the reference.
 
-Typical configuration includes:
+Example configuration:
 
 ```env
 PROVIDER=openai_compat
@@ -366,95 +408,126 @@ DATA_DIR=data
 DB_PATH=var/sop_index.db
 ```
 
-Use the exact variable names and supported values from the repository's `.env.example` and configuration module.
+Use the actual supported variable names and values defined in the project configuration.
 
-**Important:** Never commit your actual API key, `.env` file, confidential SOP documents, or staff records to GitHub.
+**Security:** Never commit real API keys, passwords, private SOP documents, or staff records.
 
-### 5. Prepare the document index
+### 5. Prepare the Document Index
 
-Place authorized SOP PDFs inside the configured data directory.
+Place authorized SOP PDFs in the configured document directory.
 
-Run the ingestion command:
+Run:
 
 ```powershell
 python -m sopassist.ingest.cli data/sops
 ```
 
-### 6. Start the backend
+### 6. Start the Backend
 
 ```powershell
 python -m uvicorn sopassist.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The backend will be available at:
+Backend endpoints:
 
-- API: `http://127.0.0.1:8000`
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- Health Check: `http://127.0.0.1:8000/healthz`
+| Service | Local URL |
+|---|---|
+| API | http://127.0.0.1:8000 |
+| Swagger Documentation | http://127.0.0.1:8000/docs |
+| Health Check | http://127.0.0.1:8000/healthz |
 
-### 7. Run automated tests
+### 7. Run Tests
 
 ```powershell
 python -m pytest -v
 ```
 
-## 🔐 Security and Data Handling
+### 8. Start the Frontend
 
-This project demonstrates document access controls, privacy-related input validation, and grounded question answering.
+Open a separate terminal:
 
-However, a publicly accessible demonstration should not be treated as a production healthcare system.
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-- Do not upload real patient records or personally identifiable information.
-- Do not publish confidential SOP documents or staff records.
-- Keep API keys and authentication secrets outside version control.
-- Restrict access to the backend and its data in production.
-- Use appropriate authentication, monitoring, rate limiting, and persistent storage before handling real organizational data.
+Configure the frontend API environment variable according to the frontend's `.env.example`.
 
-## ⚠️ Important Disclaimer
-
-MediCare SOP Assistant is an AI-assisted document retrieval and information support application.
-
-It is not a replacement for professional medical judgement, clinical decision-making, official hospital policies, or emergency procedures.
-
-Users should always verify important information against the applicable approved SOP and follow their organization's established protocols.
-
-The live application is a portfolio demonstration, not a certified healthcare product.
-
-## 🚀 Deployment
-
-The application is deployed using separate frontend and backend services.
-
-| Component | Hosting Platform |
-|---|---|
-| Frontend | Vercel |
-| Backend API | Render |
-
-The frontend communicates with the backend through HTTPS API requests.
-
-Deployment configuration is managed through environment variables so that API endpoints, model settings, and application configuration can be changed without modifying source code.
-
-## 🔮 Future Improvements
-
-- Persistent production-grade database and vector storage.
-- Advanced retrieval and reranking strategies.
-- Document version management and change tracking.
-- Expanded monitoring and observability.
-- More comprehensive evaluation using real-world query patterns.
-- Stronger production authentication and authorization.
-- Improved deployment scalability and reliability.
-
-## 👨‍💻 Author
-
-**Pawan Ajay Prasad**
-
-AI Engineer | Generative AI | Retrieval-Augmented Generation
-
-- GitHub: https://github.com/PAWAN0207
-- LinkedIn: https://www.linkedin.com/in/pawan-prasad-analyst/
-- Portfolio: https://pawan0207.github.io/
+Use the development URL displayed by Vite to open the application.
 
 ---
 
-<p align="center">
-  <strong>Built to make healthcare SOP information easier to access, verify, and understand.</strong>
-</p>
+## 🚀 Live Deployment
+
+The project is publicly accessible through the following deployment endpoints.
+
+| Service | URL |
+|---|---|
+| Web Application | [MediCare SOP Assistant](https://medicare-sop-assistant.vercel.app/) |
+| Backend | [Render API](https://medicare-sop-assistant.onrender.com/) |
+| Swagger UI | [API Documentation](https://medicare-sop-assistant.onrender.com/docs) |
+| Health Check | [Backend Health](https://medicare-sop-assistant.onrender.com/healthz) |
+
+**Deployment Note:** The backend uses a free-tier hosting service. Initial requests after inactivity may take longer because the service can spin down.
+
+---
+
+## 🔐 Security and Data Handling
+
+Healthcare-related documents and staff information require careful handling.
+
+This project demonstrates access control, input validation, and source-grounded retrieval. However, it is a portfolio demonstration and should not be treated as a production-certified healthcare system.
+
+Important considerations:
+
+- Never expose real patient information or confidential healthcare records.
+- Do not publish private SOP documents or staff records.
+- Store API keys and secrets in environment variables.
+- Apply appropriate authentication and authorization before production use.
+- Use persistent storage, monitoring, and rate limiting for production deployments.
+- Verify all important information against approved organizational procedures.
+
+### Disclaimer
+
+MediCare SOP Assistant is an AI-assisted document retrieval application. It does not replace qualified healthcare professionals, clinical judgement, official policies, or emergency response procedures.
+
+---
+
+## 🔮 Future Improvements
+
+- Persistent production-grade document and vector storage.
+- Advanced retrieval and reranking techniques.
+- SOP version control and document change tracking.
+- Improved monitoring and observability.
+- Expanded evaluation and retrieval benchmarks.
+- Stronger production authentication and authorization.
+- Scalable deployment infrastructure.
+
+---
+
+## 👨‍💻 Author
+
+<div align="center">
+
+### Pawan Ajay Prasad
+
+**AI Engineer | Generative AI | RAG Systems | Machine Learning**
+
+<a href="https://github.com/PAWAN0207">
+  <img src="https://img.shields.io/badge/GitHub-PAWAN0207-181717?style=for-the-badge&logo=github" alt="GitHub">
+</a>
+<a href="https://www.linkedin.com/in/pawan-prasad-analyst/">
+  <img src="https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin" alt="LinkedIn">
+</a>
+<a href="https://pawan0207.github.io/">
+  <img src="https://img.shields.io/badge/Portfolio-Visit-7C3AED?style=for-the-badge" alt="Portfolio">
+</a>
+
+<br><br>
+
+**Thank you for visiting this project!**
+
+*Making healthcare SOP information easier to access, retrieve, and verify.*
+
+</div>
