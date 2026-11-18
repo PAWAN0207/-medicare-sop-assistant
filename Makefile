@@ -1,9 +1,12 @@
 PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
-.PHONY: setup ingest run test eval eval-live openapi report
+.PHONY: setup check-key ingest run test eval eval-live openapi report
 
 setup:            ## 1. create venv + install deps
 	$(PY) -m venv .venv && .venv/bin/pip install -q -r requirements.txt
 	@test -f .env || cp .env.example .env
+
+check-key:        ## verify LLM key + model names with one chat and one embedding call (PROVIDER=openai_compat)
+	PROVIDER=openai_compat $(PY) scripts/check_key.py
 
 ingest:           ## index a snapshot folder (default: original library). Idempotent.
 	$(PY) -m sopassist.ingest.cli $(or $(SNAPSHOT),data/sops)

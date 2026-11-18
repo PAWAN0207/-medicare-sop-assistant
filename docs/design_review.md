@@ -1,61 +1,354 @@
-# Design review of the AI's proposal, and ADRs
+# Design Review and Architecture Decision Records
 
-Reference: `docs/ai_design_proposal.md`. Everything below was checked against the actual pack (e.g. the update snapshot renames SOP-05,
-withdraws SOP-15, and bumps SOP-02/08/11) and, where possible, backed by a test.
+## 1. Introduction
 
-## Weaknesses and risks found in the proposal (and what was done instead)
+This document reviews the AI-generated architecture proposal in `docs/ai_design_proposal.md` and compares it with the architecture implemented in the MediCare SOP Assistant.
 
-| # | Weakness / risk in the proposal | Why it breaks on *this* data | What I did instead |
+The original proposal was generated during the same working session as the implementation. It was not a pre-implementation design document. This chronology is disclosed in the original proposal.
+
+The purpose of this review is to explain which proposed ideas were retained, which were changed, and why the final implementation better addresses the requirements and risks identified in the supplied SOP document pack.
+
+The review considers document updates, access control, patient-data protection, retrieval quality, caching, reliability and operating cost.
+
+## 2. Weaknesses and Risks Identified in the Original Proposal
+
+| No. | Original proposal | Risk identified | Final implementation |
 |---|---|---|---|
-| 1 | **File name as document identity**, MD5 of file bytes as change detector | SOP-05 is renamed in the snapshot with unchanged content: by file name it would be "SOP-05 removed + a new document added" (re-embedded, and during the swap duplicated). File bytes are also unstable (re-exports change PDF metadata/timestamps) so unchanged docs would be re-embedded. | Identity = **SOP id from the PDF header**; change = **hash of normalised content + header metadata**. Rename is detected, reported, and costs 0 embeddings (`test_update_snapshot_diff`). |
-| 2 | **Fixed 1000/200 character splitter on raw page text** | Cuts procedures mid-step and splits table rows (SOP-05 colour table, SOP-10 order of draw) across chunks. Worse, the **revision-history table** says "increased from 20% to 25%" / "Superseded" - indexing it resurrects exactly the stale facts U01/U02 test for. | Section-aware chunks (one per numbered section, split only if >1200 chars), tables rendered row-by-row ("Tube cap colour: Light blue; Additive: ..."), revision history never indexed (`test_revision_history_is_not_indexed`). |
-| 3 | **Per-file delete-then-add** re-indexing | Not atomic: a crash between delete and add leaves a document missing; a query during the swap can see old+new chunks (SOP-11 v1.2 *and* v2.0 -> the "conflict" that U03 says must be gone). Adding/removing across several files has no common consistent point. | Parse + embed first (no writes), then **one transaction** applying all adds/updates/removals, bumping a `generation`, purging stale cache. Crash tests and a concurrent-reader test prove no mixed state. |
-| 4 | **Semantic cache (cosine >= 0.95) + flush on re-index** | Near-identical questions with different answers collide ("refund up to Rs 1,000" vs "above Rs 10,000" differ by a few tokens); the proposal's cache is not keyed by role, so an HR answer from SOP-13 can be served to a front-desk user; flush-on-reindex races with in-flight requests that then write an old answer *after* the flush. | **Exact normalised-question key** + access-level set + generation + prompt/model/embedder ids. A racing request writes under the old generation key which nobody reads. (ADR-3) |
-| 5 | **PII guard via LLM / redact-and-continue** | Sending the raw patient name/MRN to an external LLM *is* processing patient information, the thing the client forbids. Redaction that misses one token leaks it anyway; and the redacted question is cached and logged. | **Deterministic local guard** (regex rules), **block** instead of redact, return only identifier *types*, never log or echo values, guard runs before cache/retrieval/LLM (`test_pii_blocked_before_llm_cache_and_retrieval`). Limitation: names need a title/"patient" cue; NER/DLP is the next step. |
-| 6 | **"Instruct the LLM not to reveal restricted content"** as part of access control | A prompt rule is bypassable ("ignore previous instructions"). The README says restricted text must never reach the context. | Filter lives in the SQL that loads candidates; rows of other levels are never loaded. A spy LLM test asserts restricted text never appears in any prompt, including for an injection-style question. The proposal's metadata filter itself was kept. |
-| 7 | **LangChain + Chroma wired through the domain** | Violates the requirement that business rules not depend on a provider/framework/DB, and is slow to test offline. | Own ports (`LLMClient`, `Embedder`), fake adapters, SQLite store; only `container.py` selects adapters. |
-| 8 | **Single global similarity threshold (0.7) for "I don't know"**, LLM-as-judge for everything | Cosine scale differs per embedding model, so 0.7 is arbitrary; and an LLM judge cannot be run offline or reproduced. Nothing stops an ungrounded answer with fake citations. | Three layers: deterministic idf-weighted term-coverage gate (no LLM call spent on out-of-scope questions), `NOT_COVERED` contract, and **citation validation** (answer with no valid `[C#]` marker becomes a refusal; citations are built from chunk metadata, not LLM text). Eval uses deterministic pass rules; LLM judge listed as future work. |
+| 1 | Use file names as document identity and MD5 of file bytes for change detection. | Renaming an SOP could incorrectly appear as a document removal followed by a new addition. PDF metadata changes could also trigger unnecessary re-embedding. | Document identity is derived from the SOP ID in the PDF header. Changes are detected using a hash of normalized extracted content and relevant metadata. |
+| 2 | Use a fixed 1,000-character chunk size with 200-character overlap. | Fixed-size splitting can separate procedure steps and table rows. Revision history may also introduce outdated information into retrieval. | Section-aware chunking is used. Tables are preserved row by row, and revision-history content is excluded from indexing. |
+| 3 | Delete and re-add documents individually during re-indexing. | A failure during the operation could leave incomplete or inconsistent document data. Queries might also encounter old and new versions together. | Documents are parsed and embedded before database changes. Updates, removals and generation changes are applied in a single database transaction. |
+| 4 | Use semantic caching with a cosine similarity threshold of 0.95. | Similar-looking questions may require different answers. Responses could also be shared across users with different access permissions. | An exact normalized-question cache key includes access levels, index generation and model-related configuration. |
+| 5 | Detect patient information using an LLM or redact it before answering. | Sending unredacted patient information to an external provider creates a privacy risk. Redaction may also miss sensitive values. | A deterministic local PII guard blocks detected sensitive input before retrieval, caching or LLM processing. |
+| 6 | Rely partly on prompt instructions to prevent restricted information from being disclosed. | Prompt instructions alone cannot enforce authorization. A malicious or misleading question could attempt to bypass them. | Access filtering is applied during database retrieval. Restricted content is excluded before it reaches the LLM. |
+| 7 | Use LangChain and ChromaDB as core application dependencies. | Tightly coupling business logic to a framework or vector database makes testing and future changes more difficult. | The implementation uses separate application interfaces for LLM and embedding providers, with SQLite as the persistence layer. |
+| 8 | Use one global similarity threshold of 0.7 and an LLM judge for evaluation. | Similarity scores can vary across embedding models. LLM-based evaluation also introduces cost and makes offline testing more difficult. | A deterministic relevance gate, a not-covered response contract and citation validation are used. Offline evaluation provides repeatable regression checks. |
 
-## What I kept and why
-- **Metadata filter at retrieval for access** (the right place; I just moved it into SQL and dropped the prompt reliance).
-- **Hybrid BM25 + vector** idea: SOP content has exact tokens ("OH-05", "Code Pink", "Schedule X") where keyword match helps; implemented with RRF.
-- **Citations from metadata** (sop_id, version, section, page) rather than model text.
-- **Structured logs + request id, retry/backoff on provider 429/5xx**, FastAPI/OpenAPI, env-based config, Docker Compose.
-- **Evaluation by question type through the real API path** - but with deterministic pass rules.
+## 3. Important Design Decisions
 
-## ADR-1: Document identity and change detection  *(overrules the AI)*
-- **Context.** The snapshot is a full library; file names are not stable (SOP-05 renamed); withdrawn SOPs just vanish.
-- **Options.** (a) file name + file-byte hash (AI's proposal); (b) SOP id only (always re-embed or trust version); (c) **SOP id + content hash**; (d) SOP id + `version` header as the change signal.
-- **Decision.** (c): identity from the header SOP id, change detection from a hash of normalised extracted content and header fields (version, effective date, access level, title, sections/pages).
-- **Why not the others.** (a) false remove+add on rename, re-embeds on re-export. (b) re-embeds everything or misses edits. (d) trusts humans: a content edit without a version bump would be silently missed (this pack's SOP-05 keeps v2.2 while the file changes name, and a careless author could edit text and forget the version).
-- **Consequences.** Needs parsing before diffing (cheap compared with embedding). Two files with the same SOP id are ambiguous -> the whole snapshot is rejected rather than guessing. Hash includes page/section, so a layout change that moves a section re-embeds that document (safe direction, small cost). A change to normalisation code changes hashes -> `--rebuild`.
-- **Strongest argument for the opposite.** Hashing normalised text still depends on parser stability; a parser upgrade changes every hash. Version-header diffing is simpler, human-auditable, and matches how the client already governs documents.
+### 3.1 Document Identity and Change Detection
 
-## ADR-2: Atomic snapshot swap in one transaction with a generation counter  *(overrules the AI)*
-- **Context.** Staff must never get a mix of old and new chunks, even if re-indexing crashes; the library will reach 200+ SOPs.
-- **Options.** (a) per-file delete-then-add in a vector DB (AI); (b) **single DB transaction** holding documents, chunks and vectors; (c) blue/green: build a complete new index, flip a pointer.
-- **Decision.** (b) on SQLite (WAL): all embedding happens before the write; the write is one `BEGIN IMMEDIATE` transaction that replaces chunks, removes withdrawn docs, bumps `generation` and purges older cache rows.
-- **Consequences.** Readers get snapshot isolation for free; a crash rolls back; `BEGIN IMMEDIATE` serialises concurrent ingests; re-run = recovery. Cost: embeddings are recomputed if the process dies after embedding but before commit (cheap at this size). Index and metadata must live in the same store (they do).
-- **Strongest argument for the opposite.** Blue/green (c) gives instant rollback to the previous version and lets you smoke-test the new index with the eval set *before* it serves traffic; one big transaction holds the write lock longer as the library grows and has no rollback after commit.
+The original proposal uses the file name as the document identity.
 
-## ADR-3: Cache design - exact key including access levels and index generation  *(overrules the AI)*
-- **Context.** ~2,000 questions/day with many repeats; wrong cached answers are worse than slow answers (stale SOP, other role's content).
-- **Options.** (a) semantic cache, cosine >= 0.95, flush on re-index (AI); (b) **exact normalised-question key** with levels + generation + model ids; (c) no cache.
-- **Decision.** (b). Key = sha256(normalised question, sorted access levels, generation, prompt version, LLM id, embedder id, search mode); persisted in SQLite so it survives restarts; TTL 24 h; stale-generation rows purged in the re-index transaction. Refusals are cached, errors and PII blocks never are.
-- **Consequences.** Zero risk of collision between near-identical questions; levels (not user id) keep hit rate high while never sharing across visibility sets; generation in the key makes invalidation structural rather than a flush that can race. Cost: paraphrases miss (hit rate lower than semantic), cache grows per distinct phrasing.
-- **Strongest argument for the opposite.** Staff ask the same thing in many wordings; a semantic cache with a *strict* threshold and the same key dimensions could roughly double the hit rate and save LLM cost and latency.
+This approach is not reliable when an SOP is renamed. The supplied update snapshot includes a renamed SOP-05, which should not be treated as an entirely new document when its identity and content remain unchanged.
 
-## ADR-4: SQLite + in-process vector math instead of Chroma/pgvector
-- **Context.** 15-200+ SOPs (~1,500 chunks at most), 2,000 q/day, one-command run, atomic swap needed.
-- **Options.** (a) Chroma/Qdrant; (b) Postgres + pgvector; (c) **SQLite with embeddings as BLOBs and numpy cosine + in-memory BM25 over the permitted rows**.
-- **Decision.** (c) for the PoC behind a small store class; ~1,500 x 768 floats is a few MB, brute force is exact and ~ms.
-- **Consequences.** One file, transactional with metadata and cache, trivial to run and test; but single-node, no ANN, whole permitted set is read per query. Migration path: pgvector (same transactional story) when >50k chunks or multi-instance.
-- **Strongest argument for the opposite.** A real vector DB demonstrates production fit and offers filtering/ANN/horizontal scale; SQLite will have to be thrown away for multi-instance Cloud Run.
+The final implementation uses the SOP ID extracted from the PDF header as the document identity.
 
-## Other decisions (short)
+A normalized content hash is used to detect meaningful changes. Relevant document metadata is also included in the change detection process.
+
+This approach helps avoid unnecessary embedding calls and ensures that document updates are handled consistently.
+
+### 3.2 Section-Aware Chunking
+
+Fixed-size text splitting is simple, but it does not always preserve the meaning of operational procedures.
+
+For example, a table containing tube colours, additives and collection instructions should remain understandable when retrieved.
+
+The final implementation uses section-aware chunking and preserves table information row by row.
+
+Revision-history content is excluded because it may contain superseded information that should not be returned as current operational guidance.
+
+### 3.3 Transactional Re-indexing
+
+The original proposal suggests deleting and re-adding individual documents.
+
+The problem is that a failure between these operations could leave the index incomplete.
+
+The final implementation separates the process into two stages:
+
+1. Parse and embed the documents before changing the active index.
+2. Apply additions, updates, removals and generation changes inside a single database transaction.
+
+This design helps ensure that readers see a consistent index rather than a mixture of old and new document versions.
+
+### 3.4 Access Control
+
+Access control is enforced during retrieval rather than relying only on instructions sent to the LLM.
+
+The application determines which document access levels are permitted for the requesting user.
+
+Only permitted chunks are retrieved and passed to the answer-generation stage.
+
+This reduces the risk of restricted information appearing in the LLM context.
+
+### 3.5 Patient-Data Protection
+
+The original proposal considers redacting patient information and continuing with the request.
+
+The final implementation takes a stricter approach.
+
+Detected PII results in the request being blocked. The application returns identifier types rather than exposing the detected values.
+
+The guard runs before retrieval, caching and LLM processing.
+
+This reduces the chance of sensitive information being sent to an external model provider or stored in cached responses.
+
+The current deterministic approach has limitations, particularly around detecting names without sufficient contextual indicators. More advanced local NER or DLP support could improve detection in a future version.
+
+---
+
+## 4. Architecture Decision Records (ADRs)
+
+### ADR-1: SOP Identity and Content-Based Change Detection
+
+**Status:** Accepted
+
+**Context**
+
+The SOP library can contain renamed, updated and withdrawn documents. File names are not reliable identifiers because a document may change its file name without changing its actual identity.
+
+**Options considered**
+
+- Option A: File name and file-byte hash.
+- Option B: SOP ID only.
+- Option C: SOP ID and normalized content hash.
+- Option D: SOP ID and version number only.
+
+**Decision**
+
+Option C was selected.
+
+The SOP ID extracted from the document header identifies the document. A hash of normalized extracted content and relevant metadata determines whether the document requires updating.
+
+**Reasoning**
+
+- Renaming a document does not automatically make it a new SOP.
+- PDF metadata changes should not unnecessarily trigger re-embedding.
+- Content changes should be detected even if the document version number is unchanged.
+- Duplicate SOP IDs can be rejected instead of creating ambiguous records.
+
+**Consequences**
+
+The document must be parsed before the system can determine whether it has changed.
+
+This introduces some parsing overhead but avoids unnecessary embedding operations.
+
+A parser or normalization change may alter content hashes, in which case a rebuild may be required.
+
+**Strongest argument against this decision**
+
+Version-based change detection is simpler and easier to understand. However, it depends on document authors updating version information correctly whenever content changes.
+
+---
+
+### ADR-2: Atomic Snapshot Updates Using SQLite Transactions
+
+**Status:** Accepted
+
+**Context**
+
+Staff should not receive a mixture of old and new SOP versions when documents are updated.
+
+A failed indexing operation should not leave the active index partially updated.
+
+**Options considered**
+
+- Option A: Individual delete-and-add operations.
+- Option B: A single database transaction.
+- Option C: Build a separate index and switch to it after validation.
+
+**Decision**
+
+Option B was selected.
+
+Document parsing and embedding happen before the database write operation. The final changes are applied in one transaction.
+
+The transaction updates document records, chunks, index generation and stale cache entries.
+
+**Reasoning**
+
+- Failed transactions can be rolled back.
+- Readers are protected from partially applied updates.
+- Document updates and cache invalidation remain consistent.
+- The design is simple to run locally and does not require another database service.
+
+**Consequences**
+
+SQLite is suitable for the current proof of concept and its relatively small document collection.
+
+Large indexing operations may hold the write lock for longer periods.
+
+Embedding work completed before a failed transaction may need to be repeated.
+
+**Strongest argument against this decision**
+
+A blue-green indexing approach could provide a separate validation stage and allow rollback to the previous index after deployment.
+
+That approach may become more useful if the document library or deployment requirements grow significantly.
+
+---
+
+### ADR-3: Exact Cache Keys with Access Levels and Index Generation
+
+**Status:** Accepted
+
+**Context**
+
+The assistant may receive repeated questions. Caching can reduce response time and external LLM costs.
+
+However, returning a stale answer or sharing a response across different permission levels can create serious problems.
+
+**Options considered**
+
+- Option A: Semantic caching using embedding similarity.
+- Option B: Exact normalized-question caching with permission and generation information.
+- Option C: No caching.
+
+**Decision**
+
+Option B was selected.
+
+The cache key uses the normalized question and relevant application configuration, including:
+
+- Permitted access levels.
+- Index generation.
+- Prompt version.
+- LLM identifier.
+- Embedder identifier.
+- Search mode.
+
+The cache is stored in SQLite with a time-to-live policy.
+
+**Reasoning**
+
+- Different access levels should not share responses.
+- An updated SOP should not leave old answers available.
+- Similar but meaningfully different questions should not collide.
+- Cache invalidation should be linked to index generation.
+
+**Consequences**
+
+Exact matching is less effective for paraphrased questions than semantic caching.
+
+However, it provides more predictable behaviour and avoids the risks associated with approximate question matching.
+
+Refusals may be cached, while errors and PII-blocked requests are not cached.
+
+**Strongest argument against this decision**
+
+Semantic caching could improve the cache hit rate when staff ask the same question in different ways.
+
+It could be considered later with strict permission-aware cache keys and additional answer validation.
+
+---
+
+### ADR-4: SQLite and In-Process Vector Search
+
+**Status:** Accepted for the current proof of concept
+
+**Context**
+
+The project needs persistent document storage, vector retrieval, metadata filtering and caching.
+
+The implementation also needs to run locally without requiring multiple external infrastructure services.
+
+The inspected index contains 74 chunks and uses 3072-dimensional embeddings.
+
+**Options considered**
+
+- Option A: ChromaDB or Qdrant.
+- Option B: PostgreSQL with pgvector.
+- Option C: SQLite with stored embeddings, NumPy-based vector similarity and BM25 retrieval.
+
+**Decision**
+
+Option C was selected for the current implementation.
+
+SQLite stores document metadata, chunks, embeddings and cache information. Vector similarity is calculated using NumPy, while BM25 supports keyword-based retrieval.
+
+The results are combined using Reciprocal Rank Fusion (RRF).
+
+**Reasoning**
+
+- SQLite reduces infrastructure and deployment complexity.
+- Document metadata and cache information can be managed in the same persistence layer.
+- The current document collection is small enough for a straightforward retrieval implementation.
+- Hybrid retrieval helps with exact operational terms such as SOP identifiers, emergency codes and medical procedure references.
+- Offline tests can run without a separately hosted vector database.
+
+**Consequences**
+
+The implementation is suitable for a small, single-instance proof of concept.
+
+It does not provide distributed vector search, horizontal scaling or the operational capabilities of a dedicated vector database.
+
+Performance should be benchmarked with a larger document collection before making production-scale claims.
+
+**Strongest argument against this decision**
+
+Qdrant or PostgreSQL with pgvector would provide a clearer migration path for larger collections and multi-instance deployments.
+
+If the document library or concurrent user requirements increase significantly, a dedicated vector database or managed database should be evaluated.
+
+---
+
+## 5. Additional Implementation Decisions
+
 | Decision | Reason |
 |---|---|
-| Block, don't redact, patient data | redaction can leak, and keeps patient data out of cache/logs/LLM |
-| Revision history excluded from the index | it contains superseded values by design |
-| Refuse before calling the LLM when the gate fails | saves cost, removes a hallucination path for out-of-scope questions |
-| Snapshot guardrails (empty folder, duplicate id, >50% withdrawals, unparsable file abort the run) | a wrong folder must not silently withdraw the library |
+| Block detected patient information instead of redacting and continuing. | Reduces the risk of exposing sensitive information to external services. |
+| Exclude revision history from indexing. | Prevents superseded instructions from being retrieved as current guidance. |
+| Apply access filtering before LLM processing. | Ensures restricted document content is not included in the model context. |
+| Refuse unsupported questions before generation. | Reduces unnecessary model calls and unsupported answers. |
+| Validate citations against retrieved document metadata. | Prevents the model from inventing document references. |
+| Use hybrid BM25 and vector retrieval. | Supports both semantic questions and exact SOP terminology. |
+| Use environment variables for provider configuration and secrets. | Avoids hardcoding credentials in application code. |
+| Use request IDs and structured API errors. | Makes application failures easier to investigate. |
+| Use retry and timeout handling for provider calls. | Improves resilience against temporary external service failures. |
+| Keep offline test providers. | Allows repeatable testing without requiring paid API calls. |
+
+---
+
+## 6. Testing and Evidence
+
+The implementation includes automated tests for the major design decisions.
+
+The latest recorded automated test execution completed with 74 passing tests and no failures.
+
+Important test coverage includes:
+
+- Role-based retrieval restrictions.
+- PII detection and blocking.
+- Prevention of cross-role cache leakage.
+- Citation structure validation.
+- Refusal of unsupported questions.
+- Document update and withdrawal handling.
+- Transaction rollback and concurrent-reader consistency.
+- API validation and error handling.
+- Provider timeout and retry behaviour.
+
+The project also includes offline evaluation results and a separate semantic retrieval evaluation report.
+
+These tests provide evidence for the implemented behaviour, but they do not replace production security testing, load testing or a full clinical validation process.
+
+---
+
+## 7. Known Limitations and Future Improvements
+
+The current implementation is a proof of concept designed around the supplied fictional SOP dataset.
+
+The following improvements should be considered before production deployment:
+
+1. **Authentication:** Replace demonstration user identification with a production identity provider and secure authentication.
+2. **PII detection:** Evaluate more advanced local NER or DLP models to improve detection of patient names and other sensitive information.
+3. **Database scalability:** Evaluate PostgreSQL and pgvector or Qdrant if document volume and concurrent usage increase.
+4. **Observability:** Add centralized monitoring, distributed tracing and operational dashboards.
+5. **Evaluation:** Expand testing with additional paraphrases, adversarial questions and human-reviewed answer-quality assessments.
+6. **Deployment security:** Add production-grade secret management, network restrictions and appropriate access controls.
+7. **Performance:** Benchmark retrieval latency, concurrent requests and indexing time using a larger SOP collection.
+8. **Backup and recovery:** Establish automated database backups and a documented restoration process.
+
+---
+
+## 8. Final Conclusion
+
+The final architecture does not follow the original AI-generated proposal blindly.
+
+Several ideas were retained, including metadata-based access filtering, hybrid retrieval, structured citations, environment-based configuration and provider retry handling.
+
+Other decisions were changed to address specific risks in the supplied document pack.
+
+The most important changes are document identity based on SOP IDs, section-aware chunking, transactional indexing, permission-aware caching and blocking detected patient information before external processing.
+
+The final implementation prioritizes correctness, predictable behaviour, privacy protection and low infrastructure cost for the current proof of concept.
+
+The architecture can be extended as the document collection, user base and operational requirements grow.

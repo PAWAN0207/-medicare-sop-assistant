@@ -18,11 +18,17 @@ from ..errors import IngestError
 _RUNNING = re.compile(r"^(MediCare Clinics\s+SOP-\d+\s*\|.*|Internal document\. Uncontrolled.*|Approved by:.*)$")
 _TITLE = re.compile(r"^(SOP-\d+):\s*(.+)$")
 _SECTION = re.compile(r"^(\d+)\.\s+([A-Z].{0,80})$")
+_CID = re.compile(r"\(cid:\d+\)")
 MAX_CHUNK_CHARS = 1200
 
 
+def _fix_glyphs(s: str | None) -> str:
+    """Some PDFs use a symbol font whose bullets pdfplumber cannot map ('(cid:127)'); show them as a bullet."""
+    return _CID.sub("\u2022", s or "")
+
+
 def _clean(s: str | None) -> str:
-    return " ".join((s or "").split())
+    return " ".join(_fix_glyphs(s).split())
 
 
 def _render_table(rows: list[list[str | None]]) -> str:
@@ -42,7 +48,7 @@ def _page_blocks(page) -> list[str]:
     for t in tables:
         top, bottom = t.bbox[1], t.bbox[3]
         if top > y:
-            blocks.append(page.crop((0, y, page.width, top)).extract_text() or "")
+            blocks.append(_fix_glyphs(page.crop((0, y, page.width, top)).extract_text()))
         rows = t.extract()
         first = [_clean(c) for c in rows[0]] if rows else []
         if first[:1] == ["Department"]:
@@ -53,7 +59,7 @@ def _page_blocks(page) -> list[str]:
             blocks.append(_render_table(rows))
         y = bottom
     if y < page.height:
-        blocks.append(page.crop((0, y, page.width, page.height)).extract_text() or "")
+        blocks.append(_fix_glyphs(page.crop((0, y, page.width, page.height)).extract_text()))
     return blocks
 
 

@@ -72,7 +72,9 @@ class OpenAICompatEmbedder:
         for i in range(0, len(texts), 50):
             data = self._http.post("/embeddings", {"model": self.embedder_id, "input": texts[i:i + 50]})
             try:
-                out.extend(d["embedding"] for d in sorted(data["data"], key=lambda d: d["index"]))
-            except (KeyError, TypeError):
+                rows = list(enumerate(data["data"]))      # some providers omit "index": fall back to list order
+                rows.sort(key=lambda r: r[1].get("index", r[0]))
+                out.extend(r[1]["embedding"] for r in rows)
+            except (KeyError, TypeError, AttributeError):
                 raise UpstreamError("malformed embedding response")
         return out

@@ -6,6 +6,33 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+def load_dotenv(path: str | Path = ".env") -> bool:
+    """Minimal .env loader (no extra dependency). Real environment variables always win,
+    so `PROVIDER=fake make test` or Docker/CI settings are never overridden by the file.
+    Set SOPASSIST_NO_DOTENV=1 to skip it (the test suite does, to stay hermetic)."""
+    if os.getenv("SOPASSIST_NO_DOTENV"):
+        return False
+    p = Path(path)
+    if not p.is_file():
+        return False
+    for raw in p.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+            val = val[1:-1]
+        elif " #" in val:
+            val = val.split(" #", 1)[0].rstrip()
+        if key and key not in os.environ:
+            os.environ[key] = val
+    return True
+
+
+load_dotenv()
+
+
 def _f(name: str, default: float) -> float:
     return float(os.getenv(name, default))
 
@@ -19,7 +46,7 @@ class Settings:
     llm_base_url: str = field(default_factory=lambda: os.getenv(
         "LLM_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai"))
     llm_api_key: str = field(default_factory=lambda: os.getenv("LLM_API_KEY", ""))
-    llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "gemini-2.0-flash"))
+    llm_model: str = field(default_factory=lambda: os.getenv("LLM_MODEL", "gemini-2.5-flash"))
     embed_model: str = field(default_factory=lambda: os.getenv("EMBED_MODEL", "gemini-embedding-001"))
     llm_timeout_s: float = field(default_factory=lambda: _f("LLM_TIMEOUT_S", 20))
     llm_max_retries: int = field(default_factory=lambda: int(os.getenv("LLM_MAX_RETRIES", 2)))

@@ -1,0 +1,432 @@
+[
+  {
+    "mode": "hybrid",
+    "provider": "fake",
+    "ingest_original": "Snapshot: data\\sops\n               added: SOP-01 v4.1, SOP-02 v2.3, SOP-03 v5.0, SOP-04 v3.0, SOP-05 v2.2, SOP-06 v3.2, SOP-07 v4.0, SOP-08 v2.0, SOP-09 v1.4, SOP-10 v3.1, SOP-11 v1.2, SOP-12 v2.5, SOP-13 v3.0, SOP-14 v2.1, SOP-15 v1.1\n             updated: -\n             removed: -\n  renamed_files_only: -\n           unchanged: 0 documents (not re-embedded)\n     chunks embedded: 74\n    index generation: 1",
+    "original": [
+      {
+        "id": "Q01",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-04 v3.0 s1",
+          "SOP-11 v1.2 s2",
+          "SOP-11 v1.2 s3",
+          "SOP-04 v3.0 s5",
+          "SOP-04 v3.0 s2",
+          "SOP-04 v3.0 s3"
+        ],
+        "question": "What is the procedure for a needle-stick injury?"
+      },
+      {
+        "id": "Q02",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-05 v2.2 s2",
+          "SOP-03 v5.0 s4",
+          "SOP-10 v3.1 s3",
+          "SOP-06 v3.2 s4",
+          "SOP-04 v3.0 s1",
+          "SOP-07 v4.0 s4"
+        ],
+        "question": "Which bin do used IV tubes and gloves go into?"
+      },
+      {
+        "id": "Q03",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-02 v2.3 s2",
+          "SOP-02 v2.3 s1",
+          "SOP-02 v2.3 s5",
+          "SOP-02 v2.3 s3",
+          "SOP-02 v2.3 s4",
+          "SOP-01 v4.1 s3"
+        ],
+        "question": "How long is a new general physician appointment slot?"
+      },
+      {
+        "id": "Q04",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": false,
+        "why": [
+          "missing citation SOP-06 section ['4']",
+          "missing fact /do not use/",
+          "missing fact /1 hour/"
+        ],
+        "refused": false,
+        "cited": [
+          "SOP-06 v3.2 s2",
+          "SOP-09 v1.4 s4",
+          "SOP-06 v3.2 s5",
+          "SOP-06 v3.2 s3",
+          "SOP-02 v2.3 s2",
+          "SOP-10 v3.1 s2"
+        ],
+        "question": "What should I do if the vaccine fridge shows 10 degrees?"
+      },
+      {
+        "id": "Q05",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-10 v3.1 s4",
+          "SOP-10 v3.1 s3",
+          "SOP-10 v3.1 s6",
+          "SOP-09 v1.4 s3",
+          "SOP-07 v4.0 s3",
+          "SOP-07 v4.0 s2"
+        ],
+        "question": "Which tube should be drawn first: lavender or light blue?"
+      },
+      {
+        "id": "Q06",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-08 v2.0 s4",
+          "SOP-13 v3.0 s3",
+          "SOP-15 v1.1 s3",
+          "SOP-01 v4.1 s2",
+          "SOP-07 v4.0 s3",
+          "SOP-02 v2.3 s3"
+        ],
+        "question": "Up to what amount can front-desk staff approve a refund?"
+      },
+      {
+        "id": "Q07",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-07 v4.0 s2",
+          "SOP-14 v2.1 s1",
+          "SOP-14 v2.1 s4",
+          "SOP-14 v2.1 s5",
+          "SOP-07 v4.0 s3",
+          "SOP-14 v2.1 s2"
+        ],
+        "question": "What does Code Pink mean?"
+      },
+      {
+        "id": "Q08",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-12 v2.5 s5",
+          "SOP-11 v1.2 s5",
+          "SOP-14 v2.1 s4",
+          "SOP-08 v2.0 s3",
+          "SOP-11 v1.2 s3",
+          "SOP-12 v2.5 s1"
+        ],
+        "question": "How quickly must a suspected data breach be reported, and to whom?"
+      },
+      {
+        "id": "Q09",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-15 v1.1 s4",
+          "SOP-02 v2.3 s1",
+          "SOP-15 v1.1 s3",
+          "SOP-09 v1.4 s2",
+          "SOP-15 v1.1 s2",
+          "SOP-15 v1.1 s1"
+        ],
+        "question": "Can a doctor prescribe Schedule X drugs during a tele-consultation?"
+      },
+      {
+        "id": "Q10",
+        "type": "answerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-12 v2.5 s4",
+          "SOP-12 v2.5 s3",
+          "SOP-01 v4.1 s6",
+          "SOP-12 v2.5 s2",
+          "SOP-15 v1.1 s3",
+          "SOP-05 v2.2 s4"
+        ],
+        "question": "How long are outpatient records of a 15-year-old patient kept?"
+      },
+      {
+        "id": "Q11",
+        "type": "unanswerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": true,
+        "cited": [],
+        "question": "What is the parking reimbursement policy for doctors?"
+      },
+      {
+        "id": "Q12",
+        "type": "unanswerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": true,
+        "cited": [],
+        "question": "What is the paediatric dose of amoxicillin?"
+      },
+      {
+        "id": "Q13",
+        "type": "unanswerable",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": true,
+        "cited": [],
+        "question": "Who is the CEO of MediCare Clinics?"
+      },
+      {
+        "id": "Q14",
+        "type": "conflict",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-11 v1.2 s3",
+          "SOP-04 v3.0 s3",
+          "SOP-11 v1.2 s2",
+          "SOP-04 v3.0 s1",
+          "SOP-11 v1.2 s4",
+          "SOP-04 v3.0 s5"
+        ],
+        "question": "Within how many hours must a needle-stick injury be reported?"
+      },
+      {
+        "id": "Q15",
+        "type": "conflict",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-06 v3.2 s3",
+          "SOP-09 v1.4 s4",
+          "SOP-06 v3.2 s5",
+          "SOP-06 v3.2 s2",
+          "SOP-06 v3.2 s4",
+          "SOP-06 v3.2 s1"
+        ],
+        "question": "How often should the vaccine refrigerator temperature be recorded?"
+      }
+    ],
+    "cache_entries_before_reindex": 17,
+    "ingest_update": "Snapshot: data\\sop_updates\\2026-11-01\n               added: SOP-16 v1.0, SOP-17 v1.0\n             updated: SOP-02 v2.3 -> v2.4, SOP-08 v2.0 -> v2.1, SOP-11 v1.2 -> v2.0\n             removed: SOP-15 v1.1\n  renamed_files_only: SOP-05: SOP-05_Biomedical_Waste_Segregation_and_Disposal.pdf -> SOP-05_Biomedical_Waste_Management_Rules.pdf\n           unchanged: 11 documents (not re-embedded)\n     chunks embedded: 25\n    index generation: 2",
+    "cache_entries_after_reindex": 0,
+    "after_update": [
+      {
+        "id": "U01",
+        "type": "after_update",
+        "role": "front_desk",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-02 v2.4 s3",
+          "SOP-02 v2.4 s4",
+          "SOP-03 v5.0 s5",
+          "SOP-02 v2.4 s1",
+          "SOP-12 v2.5 s4",
+          "SOP-02 v2.4 s2"
+        ],
+        "question": "What percentage of slots should be kept free for walk-ins?"
+      },
+      {
+        "id": "U02",
+        "type": "after_update",
+        "role": "front_desk",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-08 v2.1 s4",
+          "SOP-01 v4.1 s2",
+          "SOP-07 v4.0 s3",
+          "SOP-02 v2.4 s3",
+          "SOP-07 v4.0 s2",
+          "SOP-11 v2.0 s1"
+        ],
+        "question": "Up to what amount can front-desk staff approve a refund?"
+      },
+      {
+        "id": "U03",
+        "type": "after_update",
+        "role": "nurse",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-11 v2.0 s3",
+          "SOP-04 v3.0 s3",
+          "SOP-11 v2.0 s2",
+          "SOP-04 v3.0 s1",
+          "SOP-11 v2.0 s4",
+          "SOP-04 v3.0 s5"
+        ],
+        "question": "Within how many hours must a needle-stick injury be reported?"
+      },
+      {
+        "id": "U04",
+        "type": "after_update",
+        "role": "doctor",
+        "ok": true,
+        "why": [],
+        "refused": true,
+        "cited": [],
+        "question": "Can a doctor prescribe Schedule X drugs during a tele-consultation?"
+      },
+      {
+        "id": "U05",
+        "type": "after_update",
+        "role": "front_desk",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-16 v1.0 s2",
+          "SOP-03 v5.0 s3",
+          "SOP-02 v2.4 s2",
+          "SOP-16 v1.0 s4",
+          "SOP-02 v2.4 s1",
+          "SOP-16 v1.0 s1"
+        ],
+        "question": "What should I do when I discover smoke in a consultation room?"
+      },
+      {
+        "id": "U06",
+        "type": "after_update",
+        "role": "nurse",
+        "ok": true,
+        "why": [],
+        "refused": true,
+        "cited": [],
+        "question": "What is the maximum salary advance I can take?"
+      },
+      {
+        "id": "U07",
+        "type": "after_update",
+        "role": "hr",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-17 v1.0 s1",
+          "SOP-17 v1.0 s3",
+          "SOP-17 v1.0 s2",
+          "SOP-17 v1.0 s5",
+          "SOP-17 v1.0 s4",
+          "SOP-11 v2.0 s2"
+        ],
+        "question": "What is the maximum salary advance a staff member can take?"
+      },
+      {
+        "id": "U08",
+        "type": "after_update",
+        "role": "clinic_manager",
+        "ok": true,
+        "why": [],
+        "refused": false,
+        "cited": [
+          "SOP-05 v2.2 s2",
+          "SOP-03 v5.0 s4",
+          "SOP-10 v3.1 s3",
+          "SOP-06 v3.2 s4",
+          "SOP-04 v3.0 s1",
+          "SOP-07 v4.0 s4"
+        ],
+        "question": "Which bin do used IV tubes and gloves go into?"
+      }
+    ],
+    "second_run_noop": true,
+    "pii": [
+      {
+        "input": "Patient Ramesh Kumar, MRN 448812, has a fever after vaccination. What do we do?",
+        "expected": [
+          "mrn",
+          "person_name"
+        ],
+        "got": [
+          "mrn",
+          "person_name"
+        ],
+        "ok": true,
+        "blocked_by_api": true
+      },
+      {
+        "input": "My patient's Aadhaar is 4521 8890 1234, can I store a copy?",
+        "expected": [
+          "aadhaar_number"
+        ],
+        "got": [
+          "aadhaar_number"
+        ],
+        "ok": true,
+        "blocked_by_api": true
+      },
+      {
+        "input": "Call 98480 22113 to confirm the appointment - what is the reschedule policy?",
+        "expected": [
+          "phone_number"
+        ],
+        "got": [
+          "phone_number"
+        ],
+        "ok": true,
+        "blocked_by_api": true
+      },
+      {
+        "input": "What is the policy for patients without ID?",
+        "expected": [],
+        "got": [],
+        "ok": true,
+        "blocked_by_api": false
+      },
+      {
+        "input": "Mrs. S. Rao (DOB 12/04/1961) wants her records - how long does it take?",
+        "expected": [
+          "date_of_birth",
+          "person_name"
+        ],
+        "got": [
+          "date_of_birth",
+          "person_name"
+        ],
+        "ok": true,
+        "blocked_by_api": true
+      }
+    ]
+  }
+]

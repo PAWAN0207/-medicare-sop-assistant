@@ -1,37 +1,154 @@
-# SOP Assistant for MediCare Clinics - Solution brief
-*For: Head of Operations. Proof of concept; all figures are estimates to be confirmed in a pilot.*
+# MediCare SOP Assistant
+### AI-Powered SOP Knowledge Assistant
 
-**The problem.** Staff lose time searching a shared drive where old and new SOP copies sit side by side, and sometimes act on outdated rules.
+**Prepared for:** Head of Operations
+**Solution Type:** Retrieval-Augmented Generation (RAG) Proof of Concept
 
-**What we propose.** A question-and-answer assistant that answers **only from the current SOPs**, shows exactly where the answer comes from
-(SOP, version, section, page), and says **"I don't know"** instead of guessing. It respects who may read what (front desk, clinical, HR/managers),
-never accepts patient identifiers, and updates itself when the document team drops a new library snapshot.
+---
 
-**How it works (plain language).** Each SOP is read once and split by section. When someone asks a question, the system first checks who is asking and
-shows the assistant *only* the SOPs that person is allowed to read. If nothing relevant exists it refuses; otherwise a language model writes a short
-answer from those passages and the system attaches the citations. When SOPs change, only changed documents are re-processed, withdrawn ones disappear,
-and previously saved answers are discarded automatically so nobody sees an old rule.
+## 1. The Problem
 
-**Results so far (offline test harness, not yet with a live model).** All 23 evaluation questions run; 22 passed the pack's criteria - including all
-"I don't know" questions, both conflicting-SOP questions, the post-update checks (new refund limit Rs 1,500, walk-in reserve 25%, withdrawn tele-consultation SOP
-not cited, HR-only salary-advance SOP hidden from nurses) and 5/5 patient-data inputs blocked. One question (vaccine fridge at 10 degrees) was missed by the
-simple offline search; a real language-model search is expected to fix it and will be measured before go-live.
+Clinic staff often spend valuable time searching through multiple Standard Operating Procedure (SOP) documents to find the correct instructions.
 
-| Trade-off | Choice | Effect |
-|---|---|---|
-| Accuracy vs. safety | Refuse when unsure | Some valid questions get "I don't know" (about 2 in 12 paraphrases in our check); never a made-up clinical answer |
-| Security | Access applied before the AI sees anything; patient data blocked, not cleaned | Restricted SOP text cannot leak through a clever question; staff must rephrase without names/IDs |
-| Latency | Cached answer: well under 1 s. New question: roughly 2-4 s (search + model) | Repeated questions are instant and free |
-| Data governance | Index and answers stay in your cloud project; only SOP excerpts and the question go to the model provider; audit log with request ids | Confirm provider data-use terms in a pilot |
+When old and updated documents are stored together, staff may accidentally follow outdated procedures. This can lead to inconsistent decisions, delays and operational risks.
 
-**Rough monthly cost at 300 staff / 2,000 questions per day** (assumptions: 40% answered from cache, ~1,800 input + 150 output tokens per model call,
-a low-cost "flash"-class model at about USD 0.10 / 0.40 per million input / output tokens - *please verify current prices*):
-model usage about **USD 10**, embeddings under USD 1, hosting (one small serverless container + storage) about **USD 20-40**.
-**Total roughly USD 30-50 per month.** With a premium model priced ~30x higher the model line would be ~USD 250-300; we would pilot the cheap model first.
+## 2. Proposed Solution
 
-**Risks and mitigations.** (1) Wrong or missing answers -> citations on every answer, refusal path, weekly review of "I don't know" logs. (2) Patient data in questions ->
-blocking guard today; add a dedicated detection service before wide rollout (names are the weak spot). (3) Wrong folder uploaded -> the system rejects empty/partial snapshots
-and applies updates all-or-nothing. (4) No login yet -> must sit behind your single sign-on before staff use.
+MediCare SOP Assistant is an AI-powered assistant that helps clinic staff find answers directly from their approved SOP documents.
 
-**Next steps (4-6 weeks).** 1) Run the evaluation against the live model and tune. 2) Add single sign-on and a simple chat page. 3) Pilot with 2 clinics and collect "was this helpful" feedback.
-4) Add alerts when new SOPs contradict existing ones. 5) Move to a managed database when the library passes ~200 SOPs or multiple servers are needed.
+Staff can ask questions in natural language and receive clear answers with references to the original documents.
+
+The system is designed to:
+
+- Answer questions using available SOP documents.
+- Display SOP ID, version, section and page references.
+- Refuse questions when sufficient supporting information is unavailable.
+- Restrict document access according to staff permissions.
+- Block detected patient identifiers before retrieval and AI processing.
+- Process new, modified and withdrawn SOP documents.
+
+## 3. How the System Works
+
+The application follows a Retrieval-Augmented Generation (RAG) workflow.
+
+**Step 1 – Document Processing**
+The system reads PDF documents and extracts their text and section information.
+
+**Step 2 – Document Indexing**
+Extracted content is divided into meaningful chunks. The system stores document metadata and vector embeddings for searching.
+
+**Step 3 – Access Verification**
+Before retrieval, the system checks the requesting user's access permissions.
+
+**Step 4 – Hybrid Search**
+The system combines keyword-based BM25 search and vector similarity search. Reciprocal Rank Fusion combines the results to identify relevant SOP sections.
+
+**Step 5 – Answer Generation**
+The language model generates an answer using the retrieved SOP content.
+
+**Step 6 – Citation Display**
+The response includes references to the source SOP, version, section and page.
+
+**Step 7 – Document Updates**
+When documents change or are withdrawn, the index is updated and outdated cached answers are invalidated.
+
+## 4. Technology Stack
+
+| Component | Technology |
+|---|---|
+| Backend | Python, FastAPI |
+| Frontend | React, TypeScript, Vite |
+| Language Model | Google Gemini |
+| Embedding Model | Gemini Embedding |
+| Vector Search | NumPy-based cosine similarity |
+| Keyword Search | BM25 |
+| Result Ranking | Reciprocal Rank Fusion |
+| Database | SQLite |
+| PDF Processing | pdfplumber |
+| Testing | Pytest |
+| Deployment Packaging | Docker |
+
+## 5. Security and Data Protection
+
+Security is an important part of the application.
+
+- Role-based access filtering restricts which SOP documents a user can retrieve.
+- Restricted document content is excluded from the language model context.
+- Detected patient identifiers are blocked before retrieval and AI processing.
+- Cache entries are isolated using access information and index generation.
+- Request IDs help identify and trace API requests.
+- API credentials are managed through environment variables rather than committed to source control.
+
+**Production requirement:** Secure staff authentication, centralized authorization, managed secrets and appropriate network controls must be completed before real clinic deployment.
+
+## 6. Testing and Evaluation Results
+
+The proof of concept has undergone automated backend testing, semantic retrieval evaluation and frontend manual testing.
+
+| Test Area | Result |
+|---|---|
+| Automated backend test suite | 74 passed, 0 failed |
+| Semantic retrieval evaluation | 12/12 expected retrieval checks passed |
+| Unanswerable questions | 3 cases inspected |
+| Post-update role-mixed evaluation | 8/8 passed |
+| Patient-data protection evaluation | 5/5 passed |
+| Frontend manual testing | Core question-answer, citation and refusal flows tested |
+
+The automated tests cover:
+
+- Role-based access control.
+- Patient information protection.
+- Document indexing and updates.
+- Cache isolation and invalidation.
+- Citation metadata.
+- Unsupported question handling.
+- API endpoints and error handling.
+
+The semantic retrieval evaluation checks whether expected SOP content appears in the retrieved results. It does not independently prove that every generated answer is correct.
+
+The application has also been connected to the Gemini API and tested through its frontend. Further live-model evaluation is required before production use.
+
+## 7. Cost and Infrastructure Considerations
+
+The application uses a lightweight architecture to keep infrastructure requirements manageable.
+
+The main operating costs will depend on:
+
+- Language model API usage.
+- Embedding generation during document indexing.
+- Backend hosting.
+- Document and database storage.
+- Number of staff and daily questions.
+
+Caching can reduce repeated model calls. Incremental indexing can also reduce unnecessary embedding requests when only a few SOP documents change.
+
+Actual monthly costs should be measured during a pilot using real usage data and current provider pricing.
+
+## 8. Risks and Mitigation
+
+| Risk | Mitigation |
+|---|---|
+| Incorrect or unsupported answers | Retrieval checks, citations and refusal handling |
+| Patient information exposure | PII detection and blocking before AI processing |
+| Unauthorized document access | Role-based filtering and production authentication |
+| Outdated SOP information | Document version tracking and transactional index updates |
+| Increased document volume | Evaluate a managed database and dedicated vector database when required |
+| Model provider dependency | Keep provider configuration separate from core application logic |
+
+## 9. Recommended Next Steps
+
+1. Complete further live-model answer-quality evaluation.
+2. Integrate secure staff authentication and authorization.
+3. Deploy the application in a controlled environment.
+4. Conduct a pilot with a small group of clinic staff.
+5. Collect feedback and review unanswered questions.
+6. Measure actual API, hosting and storage costs.
+7. Evaluate scalability and monitoring requirements before wider deployment.
+
+## 10. Conclusion
+
+MediCare SOP Assistant demonstrates how Retrieval-Augmented Generation can make clinic SOP information easier to access while maintaining document-level permissions, source citations and refusal controls.
+
+The current implementation provides a working proof of concept with a functional frontend, FastAPI backend, hybrid retrieval, document update handling and automated testing.
+
+Additional authentication, security validation, operational monitoring and pilot testing are necessary before the system can be used in a real clinical environment.

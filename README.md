@@ -10,7 +10,7 @@ re-indexes from a **full-library snapshot** incrementally, and caches repeated q
 
 ```bash
 make setup                                   # venv + dependencies + .env (PROVIDER=fake)
-make test                                    # 72 offline tests, ~8 s
+make test                                    # offline tests, no key, ~10 s
 make run                                     # indexes data/sops, serves http://localhost:8000  (Swagger at /docs)
 make ingest SNAPSHOT=data/sop_updates/2026-11-01   # (2nd terminal) apply the update snapshot, prints what changed
 make eval                                    # full evaluation -> docs/eval_results.md
@@ -24,8 +24,14 @@ curl -s localhost:8000/v1/ask -H 'content-type: application/json' \
 ```
 
 ### Using a real LLM (Gemini free tier or any OpenAI-compatible API)
-Edit `.env`: `PROVIDER=openai_compat`, `LLM_API_KEY=...` (see `.env.example`), then `make ingest` (re-run with `--rebuild` if you
-switch embedding model) and `make eval-live`. The gate thresholds (`MIN_TERM_COVERAGE`, `MIN_COSINE`) should be re-tuned from that run.
+1. Put your key in `.env` (`.env` is git-ignored and loaded automatically; real environment variables override it):
+   `PROVIDER=openai_compat`, `LLM_API_KEY=...` (see `.env.example`).
+2. `make check-key` - one chat call + one embedding call; catches a wrong key or retired model name in seconds.
+3. If you ran the fake provider before, the index holds fake vectors: `python -m sopassist.ingest.cli data/sops --rebuild`
+   (or delete `var/sop_index.db`) once after switching to a real embedder.
+4. `make eval-live`, then re-tune `MIN_TERM_COVERAGE` / `MIN_COSINE` from that run.
+
+Step-by-step setup for Windows / macOS / Linux, venv, testing and the GitHub push: **[docs/SETUP.md](docs/SETUP.md)**.
 
 ## Architecture
 

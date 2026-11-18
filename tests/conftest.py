@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("SOPASSIST_NO_DOTENV", "1")   # tests must not depend on a developer's local .env
+
 from pathlib import Path
 
 import pytest
